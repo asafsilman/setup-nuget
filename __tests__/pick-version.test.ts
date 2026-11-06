@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import nock from 'nock';
 import pickVersion from '../src/pick-version.js';
 
@@ -120,4 +121,24 @@ test('errors if an invalid label is passed in', async () => {
     "Invalid release label: 'yesterday'. Valid labels are 'latest' and 'preview'."
   );
   srv.done();
+});
+
+test('aborts timed-out requests and retries four attempts', async () => {
+  const createTimeout = AbortSignal.timeout.bind(AbortSignal);
+  const timeout = jest
+    .spyOn(AbortSignal, 'timeout')
+    .mockImplementation(() => createTimeout(25));
+  const srv = nock(HOST);
+  srv.get(PATH).times(4).delay(200).reply(200, TOOLS_JSON_RESPONSE);
+
+  try {
+    await expect(pickVersion('latest')).rejects.toThrow(
+      'Request to https://dist.nuget.org/tools.json timed out after 30 seconds.'
+    );
+    expect(timeout).toHaveBeenCalledTimes(4);
+    expect(timeout).toHaveBeenCalledWith(30_000);
+    srv.done();
+  } finally {
+    timeout.mockRestore();
+  }
 });

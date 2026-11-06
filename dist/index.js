@@ -35233,9 +35233,17 @@ async function getNuGetToolsJsonWithRetries(urlString) {
 function getNuGetToolsJson(urlString) {
     info(`HTTPS_PROXY: ${process.env.HTTPS_PROXY}`);
     info(`NODE_USE_ENV_PROXY: ${process.env.NODE_USE_ENV_PROXY}`);
+    info(`NODE VERSION: ${process.version}`);
     return new Promise((resolve, reject) => {
         const url = new URL(urlString);
-        const request = external_https_.get(url, { agent }, response => {
+        const signal = AbortSignal.timeout(30_000);
+        const rejectRequestError = (error) => {
+            reject(signal.aborted
+                ? new Error(`Request to ${urlString} timed out after 30 seconds.`, { cause: error })
+                : error);
+        };
+        const request = external_https_.get(url, { agent, signal }, response => {
+            response.on('error', rejectRequestError);
             if (response.statusCode === undefined || response.statusCode < 200 || response.statusCode >= 300) {
                 response.resume();
                 reject(new Error(`Failed to fetch NuGet tools metadata from ${urlString}.`));
@@ -35256,7 +35264,7 @@ function getNuGetToolsJson(urlString) {
                 }
             });
         });
-        request.on('error', reject);
+        request.on('error', rejectRequestError);
     });
 }
 

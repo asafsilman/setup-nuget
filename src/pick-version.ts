@@ -78,10 +78,18 @@ async function getNuGetToolsJsonWithRetries(urlString: string): Promise<NuGetToo
 function getNuGetToolsJson(urlString: string): Promise<NuGetTools> {
   core.info(`HTTPS_PROXY: ${process.env.HTTPS_PROXY}`);
   core.info(`NODE_USE_ENV_PROXY: ${process.env.NODE_USE_ENV_PROXY}`);
+  core.info(`NODE VERSION: ${process.version}`);
 
   return new Promise((resolve, reject) => {
     const url = new URL(urlString);
-    const request = https.get(url, { agent },  response => {
+    const signal = AbortSignal.timeout(30_000);
+    const rejectRequestError = (error: Error) => {
+      reject(signal.aborted
+        ? new Error(`Request to ${urlString} timed out after 30 seconds.`, {cause: error})
+        : error);
+    };
+    const request = https.get(url, { agent, signal }, response => {
+      response.on('error', rejectRequestError);
       if (response.statusCode === undefined || response.statusCode < 200 || response.statusCode >= 300) {
         response.resume();
         reject(new Error(`Failed to fetch NuGet tools metadata from ${urlString}.`));
@@ -103,6 +111,6 @@ function getNuGetToolsJson(urlString: string): Promise<NuGetTools> {
       });
     });
 
-    request.on('error', reject);
+    request.on('error', rejectRequestError);
   });
 }
