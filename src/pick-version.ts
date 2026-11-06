@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import * as https from 'https';
 import * as semver from 'semver';
 
@@ -73,6 +74,9 @@ async function getNuGetToolsJsonWithRetries(urlString: string): Promise<NuGetToo
 }
 
 function getNuGetToolsJson(urlString: string): Promise<NuGetTools> {
+  core.info(`HTTPS_PROXY: ${process.env.HTTPS_PROXY}`);
+  core.info(`NODE_USE_ENV_PROXY: ${process.env.NODE_USE_ENV_PROXY}`);
+
   return new Promise((resolve, reject) => {
     const url = new URL(urlString);
     const request = https.get(url, response => {
