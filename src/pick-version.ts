@@ -19,6 +19,8 @@ interface NuGetTools {
   'nuget.exe': Tool[];
 }
 
+const agent = new https.Agent({proxyEnv: process.env})
+
 export default async function pickVersion(spec: string): Promise<Tool> {
   spec = spec.trim();
   let versions = await fetchVersions();
@@ -79,7 +81,7 @@ function getNuGetToolsJson(urlString: string): Promise<NuGetTools> {
 
   return new Promise((resolve, reject) => {
     const url = new URL(urlString);
-    const request = https.get(url, response => {
+    const request = https.get(url, { agent },  response => {
       if (response.statusCode === undefined || response.statusCode < 200 || response.statusCode >= 300) {
         response.resume();
         reject(new Error(`Failed to fetch NuGet tools metadata from ${urlString}.`));

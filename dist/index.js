@@ -35184,6 +35184,7 @@ var Stage;
     Stage["preview"] = "EarlyAccessPreview";
     Stage["_released"] = "Released";
 })(Stage || (Stage = {}));
+const agent = new external_https_.Agent({ proxyEnv: process.env });
 async function pickVersion(spec) {
     spec = spec.trim();
     let versions = await fetchVersions();
@@ -35234,7 +35235,7 @@ function getNuGetToolsJson(urlString) {
     info(`NODE_USE_ENV_PROXY: ${process.env.NODE_USE_ENV_PROXY}`);
     return new Promise((resolve, reject) => {
         const url = new URL(urlString);
-        const request = external_https_.get(url, response => {
+        const request = external_https_.get(url, { agent }, response => {
             if (response.statusCode === undefined || response.statusCode < 200 || response.statusCode >= 300) {
                 response.resume();
                 reject(new Error(`Failed to fetch NuGet tools metadata from ${urlString}.`));
